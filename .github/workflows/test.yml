@@ -1,57 +1,67 @@
 name: CI
-
 on: [push, pull_request]
-
 jobs:
-  test:
-    name: "Python ${{ matrix.python-version }}"
+  black:
     runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-python@v2
+        with:
+          python-version: 3.7
+      - uses: actions/checkout@v2
+      - run: python -m pip install --upgrade tox
+      - run: tox -e black
 
+  flake8:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-python@v2
+        with:
+          python-version: 3.7
+      - uses: actions/checkout@v2
+      - run: python -m pip install --upgrade tox
+      - run: tox -e flake8
+
+  mypy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-python@v2
+        with:
+          python-version: 3.7
+      - uses: actions/checkout@v2
+      - run: python -m pip install --upgrade tox
+      - run: tox -e mypy
+
+  isort:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-python@v2
+        with:
+          python-version: 3.7
+      - uses: actions/checkout@v2
+      - run: python -m pip install --upgrade tox
+      - run: tox -e isort
+
+  tests:
+    runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.6, 3.7, 3.8, 3.9]
-
+        python-version: [3.5, 3.6, 3.7, 3.8, 3.9, pypy3]
     steps:
-      - uses: actions/checkout@v2
-
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-
-      - name: Run tests
-        run: |
-          pytest
-          mypy pyteal
-          python3 -c "import pyteal" scripts/generate_init.py --check
-          black --check .
-
-  release:
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
-    runs-on: ubuntu-latest
-
-    steps:
       - uses: actions/checkout@v2
+      - run: python -m pip install --upgrade tox
+      - run: tox -e py${{ matrix.python-version }}
 
-      - name: Set up Python 3.9
-        uses: actions/setup-python@v2
+  coveralls:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-python@v2
         with:
-          python-version: 3.9
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-
-      - name: Build and publish to PyPI
-        env:
-          TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
-        run: |
-          python setup.py sdist bdist_wheel
-          twine upload dist/*
+          python-version: 3.7
+      - uses: actions/checkout@v2
+      - run: python -m pip install --upgrade tox coveralls
+      - run: tox
+      - run: coveralls
