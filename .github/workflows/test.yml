@@ -2,48 +2,90 @@ name: CI
 
 on:
   push:
+    branches: ["main"]
   pull_request:
+    branches: ["main"]
   workflow_dispatch:
 
 jobs:
-  build:
+  tests:
+    name: "Python ${{ matrix.python-version }}"
+    runs-on: "ubuntu-22.04"
 
-    runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["2.7", "3.6"]
+        python-version: ["3.5", "3.6", "3.7", "3.8", "3.9", "pypy-3.7"]
+        include:
+          - python-version: "3.8"
+            env: TOXENV: "pre-commit"
+          - python-version: "3.5"
+            env: TOXENV: "py35-2.2"
+          - python-version: "3.6"
+            env: TOXENV: "py36-2.2"
+          - python-version: "3.7"
+            env: TOXENV: "py37-2.2"
+          - python-version: "3.8"
+            env: TOXENV: "py38-2.2"
+          - python-version: "pypy-3.7"
+            env: TOXENV: "pypy3-2.2"
+          - python-version: "3.6"
+            env: TOXENV: "py36-3.0"
+          - python-version: "3.7"
+            env: TOXENV: "py37-3.0"
+          - python-version: "3.8"
+            env: TOXENV: "py38-3.0"
+          - python-version: "pypy-3.7"
+            env: TOXENV: "pypy3-3.0"
+          - python-version: "3.6"
+            env: TOXENV: "py36-3.1"
+          - python-version: "3.7"
+            env: TOXENV: "py37-3.1"
+          - python-version: "3.8"
+            env: TOXENV: "py38-3.1"
+          - python-version: "pypy-3.7"
+            env: TOXENV: "pypy3-3.1"
+          - python-version: "3.6"
+            env: TOXENV: "py36-3.2"
+          - python-version: "3.7"
+            env: TOXENV: "py37-3.2"
+          - python-version: "3.8"
+            env: TOXENV: "py38-3.2"
+          - python-version: "3.9"
+            env: TOXENV: "py39-3.2"
+          - python-version: "pypy-3.7"
+            env: TOXENV: "pypy3-3.2"
+          - python-version: "3.8"
+            env: TOXENV: "py38-main"
+          - python-version: "3.9"
+            env: TOXENV: "py39-main"
+          - python-version: "pypy-3.7"
+            env: TOXENV: "pypy3-main"
 
     steps:
-      - uses: actions/checkout@v3
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
+      - uses: "actions/checkout@v2"
+      - uses: "actions/setup-python@v2"
         with:
-          python-version: ${{ matrix.python-version }}
-      - name: Install dependencies
+          python-version: "${{ matrix.python-version }}"
+      - name: "Install dependencies"
         run: |
-          python -m venv .env
-          .env/bin/pip install -U setuptools pip
-          .env/bin/pip install -r requirements.txt
-          .env/bin/pip install flake8
-      - name: Run DynamoDB Local
+          python -m pip install --upgrade pip
+          python -m pip install coverage tox
+      - name: "Run tox"
+        run: "tox -e ${{ matrix.env.TOXENV }}"
+
+  coverage:
+    name: "Upload coverage to Coveralls"
+    runs-on: "ubuntu-22.04"
+    needs: tests
+
+    steps:
+      - uses: "actions/checkout@v2"
+      - uses: "actions/setup-python@v2"
+        with:
+          python-version: "3.8"
+      - name: "Install dependencies"
         run: |
-          mkdir /tmp/dynamodb_local
-          wget -O - https://s3-us-west-2.amazonaws.com/dynamodb-local/dynamodb_local_latest.tar.gz | tar xz --directory /tmp/dynamodb_local
-          java -Djava.library.path=/tmp/dynamodb_local/DynamoDBLocal_lib -jar /tmp/dynamodb_local/DynamoDBLocal.jar -sharedDb -inMemory &
-      - name: Run tests
-        env:
-          BOTO_CONFIG: /dev/null
-        run: |
-          .env/bin/flake8 --ignore=E501
-          mkdir dump && cp -a test/testTable dump
-          python dynamodump.py -m restore -r local -s testTable -d testRestoredTable --host localhost --port 8000 --accessKey a --secretKey a
-          python dynamodump.py -m backup -r local -s testRestoredTable --host localhost --port 8000 --accessKey a --secretKey a
-          python test/test.py
-          python dynamodump.py -m restore -r local -s "*" --host localhost --port 8000 --accessKey a --secretKey a
-          rm -rf dump/test*
-          python dynamodump.py -m backup -r local -s "*" --host localhost --port 8000 --accessKey a --secretKey a
-          python test/test.py
-          python dynamodump.py -m restore -r local -s "test*" --host localhost --port 8000 --accessKey a --secretKey a --prefixSeparator ""
-          rm -rf dump/test*
-          python dynamodump.py -m backup -r local -s "test*" --host localhost --port 8000 --accessKey a --secretKey a --prefixSeparator ""
-          python test/test.py
+          python -m pip install --upgrade pip
+          python -m pip install coveralls
+      - name: "Run coveralls"
+        run: "coveralls"
