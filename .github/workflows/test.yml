@@ -2,46 +2,64 @@ name: CI
 
 on:
   push:
-    branches:
-      - main
-      - dev
-    tags:
+    branches: [ main ]
   pull_request:
+    branches:
+      - '**'
 
 jobs:
-  test:
+  run_tests:
+    name: Run Tests
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        python-version: ["3.6", "3.7", "3.8", "3.9"]
+        os: [ubuntu-22.04]
+        python-version: ["3.6", "3.7", "3.8", "3.9", "3.10"]
+        tox-env: [
+          "flake8", "check_rst", "coverage",
+          "py36-django111", "py36-django22",
+          "py37-django111",
+          "py38-django22",
+          "py39-django22", "py39-django32",
+          "py310-django32", "py310-django40", "py310-django41"
+        ]
         include:
+          - python-version: "3.6"
+            tox-env: "py36-django111"
+            arch: "ppc64le"
+          - python-version: "3.6"
+            tox-env: "py36-django22"
+            arch: "ppc64le"
+          - python-version: "3.7"
+            tox-env: "py37-django111"
+            arch: "ppc64le"
           - python-version: "3.8"
-            env: TOXENV=coverage,mypy,style,docs,dist-test
-    runs-on: ubuntu-latest
+            tox-env: "py38-django22"
+            arch: "ppc64le"
+          - python-version: "3.9"
+            tox-env: "py39-django22"
+            arch: "ppc64le"
+          - python-version: "3.10"
+            tox-env: "py310-django32"
+            arch: "ppc64le"
+
     steps:
       - uses: actions/checkout@v2
       - name: Setup Python
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
-      - run: pip install ".[build]"
-      - run: tox
-      - name: Coveralls
-        if: contains(matrix.env, 'coverage')
-        run: coveralls
 
-  deploy:
-    runs-on: ubuntu-latest
-    needs: test
-    if: github.event_name == 'push' && github.ref_type == 'tag' && github.ref == 'refs/tags/*'
-    steps:
-      - uses: actions/checkout@v2
-      - name: Setup Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: 3.8
-      - run: pip install ".[build]"
-      - run: |
-          if [ -n "${{ secrets.PYPI_TOKEN }}" ]; then
-            python -m build
-            twine upload dist/* -u __token__ -p ${{ secrets.PYPI_TOKEN }} --skip-existing
-          fi
+      - name: Install Dependencies
+        run: |
+          pip install --upgrade setuptools
+          pip install tox
+
+      - name: Run Tests
+        env:
+          TOX_ENV: ${{ matrix.tox-env }}
+        run: tox -e $TOX_ENV
+
+      - name: Show Tox Logs
+        if: always()
+        run: cat tox_log/*.log
