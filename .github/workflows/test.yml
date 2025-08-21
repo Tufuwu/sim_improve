@@ -1,28 +1,31 @@
 name: Python package
 
-on: [push, pull_request]
+on: [push]
 
 jobs:
   build:
+
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [2.7, 3.9, 3.8, 3.7, 3.6, 3.5, pypy-2.7, pypy-3.7]
-        arch: [amd64, arm64]
-      exclude:
-        - python-version: 3.7
-          arch: amd64
-        - python-version: 3.7
-          arch: arm64
+        python-version: ["3.5", "3.6", "3.7", "3.8"]
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
+
       - name: Install dependencies
-        run: pip install mock
-      - name: Run tests
-        run: python -m unittest discover -p *_test.py
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -qq libhdf5-serial-dev
+          python -m pip install --upgrade pip setuptools wheel virtualenv
+          pip install tox tox-travis codecov
+
+      - name: Run tox
+        run: tox
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
