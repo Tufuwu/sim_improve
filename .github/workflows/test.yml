@@ -1,28 +1,49 @@
-name: python-tests
-on:
-  push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
+name: CI
+
+on: [push, pull_request]
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["2.7", "3.4", "3.5", "3.6", "3.7", "3.8", "nightly", "pypy"]
+        python-version: ['2.7', '3.5', '3.6', '3.7', '3.8']
+        version: ['19.3.5', '18.14.9']
+
+    services:
+      docker:
+        image: yandex/clickhouse-server:${{ matrix.version }}
+        ports:
+          - 9000:9000
+          - 8123:8123
+        options: --ulimit nofile=262144:262144
 
     steps:
+      - name: Check out repository code
+        uses: actions/checkout@v2
 
-    - uses: actions/checkout@v2
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
-      with:
-        python-version: ${{ matrix.python-version }}
-    - name: Run setconf.py
-      run: ./setconf.py --test
-    - name: Run test.sh
-      run: cd testcases && ./test.sh
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip setuptools
+          pip install flake8 flake8-print coveralls
+
+      - name: Configure ClickHouse server
+        run: |
+          sed -i 's/^host=localhost$/host=clickhouse-server/' setup.cfg
+          echo '127.0.0.1 clickhouse-server' | sudo tee -a /etc/hosts
+
+      - name: Lint with flake8
+        run: flake8
+
+      - name: Run tests
+        run: coverage run --source=clickhouse_sqlalchemy setup.py test
+
+      - name: Upload coverage to Coveralls
+        run: coveralls
+        env:
+          COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
