@@ -1,39 +1,51 @@
-name: Python package
+name: CI
 
 on:
-  push:
-    branches:
-      - main
+  - push
+  - pull_request
 
 jobs:
-  build:
-
-    runs-on: ubuntu-22.04
+  test:
     strategy:
-      max-parallel: 4
+      fail-fast: false
       matrix:
-        python-version: [3.6, 3.7, 3.8, 3.9]
-
+        python-version: ['3.5', '3.6', '3.7', '3.8', 'pypy3']
+        include:
+          - python-version: 3.5
+            env: TOXENV=py35
+          - python-version: 3.6
+            env: TOXENV=py36
+          - python-version: 3.7
+            env: TOXENV=py37
+          - python-version: 3.8
+            env: TOXENV=py38
+          - python-version: 3.5
+            env: TOXENV=py35-pytest
+          - python-version: 3.6
+            env: TOXENV=py36-pytest
+          - python-version: 3.7
+            env: TOXENV=py37-pytest
+          - python-version: 3.7
+            env: TOXENV=py37-failskip
+          - python-version: 3.7
+            env: TOXENV=py37-limit
+          - python-version: 3.7
+            env: TOXENV=py37-prefix
+          - python-version: 3.7
+            env: TOXENV=placement
+          - python-version: pypy3
+            env: TOXENV=pypy3
+          - env: TOXENV=pep8
+    runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v1
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v1
-      with:
-        python-version: ${{ matrix.python-version }}
-    - name: Install PostgreSQL
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y postgresql-13
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install .
-    - name: Set up SSH
-      run: |
-        ssh-keygen -f ~/.ssh/id_rsa -N ""
-        cp ~/.ssh/id_rsa.pub ~/.ssh/authorized_keys
-        ssh -o StrictHostKeyChecking=no localhost id
-    - name: Test with pytest
-      run: |
-        pip install pytest
-        pytest tests
+      - uses: actions/checkout@v3
+      - name: Setup Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          pip install tox
+      - name: Run tests
+        run: |
+          tox
