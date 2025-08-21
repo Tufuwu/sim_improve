@@ -1,55 +1,29 @@
-name: "Python CI"
-
-on:
-  push:
-    tags:
-      - '*'
-  pull_request:
-    branches:
-      - '**'
-
+name: CI
+on: [push, pull_request]
 jobs:
-  build-test:
-    runs-on: ubuntu-22.04
+  build:
+    runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.6', '3.7', '3.8']
+        python-version:
+          - '2.7'
+          - '3.8'
+          - '3.9'
     steps:
-      - name: Check out code
-        uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
-      - name: Set up Python ${{ matrix.python-version }}
+      - uses: actions/checkout@v2
+      - name: Set up Python
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
         run: |
-          pip install -e .
-          pip install astroid>=2.0
-          pip install pylint>=2.0
-      - name: Lint with pylint
-        run: pylint --rcfile=.pylintrc infinisdk setup.py
-
-  deploy:
-    runs-on: ubuntu-22.04
-    needs: build-test
-    if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags') }}
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
-      - name: Set up Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: '3.8'
-      - name: Install dependencies
-        run: pip install wheel
-      - name: Build package
-        run: python setup.py sdist bdist_wheel
-      - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          user: __token__
-          password: ${{ secrets.PYPI_PASSWORD }}
+          pip install codecov
+          pip install -r requirements.txt
+          pip install -r test-requirements.txt
+      - name: Run tests
+        run: |
+          flake8 stockstats.py test.py
+          py.test --cov=./ test.py
+      - name: Upload coverage to Codecov
+        if: success()
+        run: codecov
