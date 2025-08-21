@@ -1,44 +1,47 @@
 name: CI
 
-on:
-  push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
-  workflow_dispatch:
+on: [push, pull_request]
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.6]
-        env:
-          - TOXENV=flake8
-          - TOXENV=black
-          - TOXENV=elasticsearch
+        python-version: [3.4, 3.5, 3.6, 3.7, 3.8, 3.9, nightly, pypy3]
+        include:
+          - python-version: 3.4
+            WITH_OPT_DEPS: false
+          - python-version: 3.5
+            WITH_OPT_DEPS: false
+          - python-version: 3.6
+            WITH_OPT_DEPS: false
+          - python-version: 3.7
+            WITH_OPT_DEPS: false
+          - python-version: 3.7
+            WITH_OPT_DEPS: true
+          - python-version: 3.8
+            WITH_OPT_DEPS: true
+          - python-version: 3.9
+            WITH_OPT_DEPS: true
+          - python-version: nightly
+            WITH_OPT_DEPS: true
+          - python-version: pypy3
+            WITH_OPT_DEPS: false
     steps:
-      - uses: actions/checkout@v2
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
-        with:
-          python-version: ${{ matrix.python-version }}
-      - name: Install Dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install tox
-          pip install codecov
-      - name: Run Tox
-        run: tox
-      - name: Run Codecov
-        if: success()
-        run: codecov
-      - name: Set up Elasticsearch
-        if: matrix.env == 'TOXENV=elasticsearch'
-        run: |
-          docker pull elasticsearch:7.3.2
-          docker run --name elasticsearch -e "discovery.type=single-node" -p 9200:9200 -d elasticsearch:7.3.2
-          docker ps
-          sleep 60
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        if [ "${{ matrix.WITH_OPT_DEPS }}" = "true" ]; then pip install -vr requirements.txt pytest; fi
+        git clone https://github.com/ProgVal/irctest.git
+        echo "y" | pip uninstall limnoria || true
+    - name: Run tests
+      run: |
+        echo ${{ matrix.python-version }}
+        python setup.py install
+        supybot-test test -v --plugins-dir=./plugins/ --no-network
+        if [ "${{ matrix.WITH_OPT_DEPS }}" = "true" ] && [[ "${{ matrix.python-version }}" =~ ^3\.[4-9] ]]; then cd irctest; pytest --controllers irctest.controllers.limnoria; fi
