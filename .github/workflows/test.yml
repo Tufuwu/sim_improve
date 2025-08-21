@@ -1,6 +1,6 @@
 name: test_and_release
 
-on: [push, pull_request]
+on: [ push, pull_request]
 
 jobs:
   build:
@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.4', '3.5', '3.6', '3.7', '3.8']
+        python-version: ['3.6', '3.7', '3.8', '3.x']
 
     steps:
     - uses: actions/checkout@v2
@@ -18,15 +18,11 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
+        sudo apt-get install -qq openjdk-8-jre
         python -m pip install --upgrade pip
-        pip install .
-        pip install coveralls
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
     - name: Run tests
-      run: |
-        coverage run --source=vipaccess setup.py test
-    - name: Coverage report
-      run: |
-        coveralls
+      run: python setup.py test
 
   release:
 
