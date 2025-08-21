@@ -1,26 +1,28 @@
-name: test
+name: Test
 
-on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+on: [push, pull_request, workflow_dispatch]
 
 jobs:
-
   test:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        python: [2.7, 3.7]
+        python-version: ["2.7", "3.6", "3.7", "3.8", "3.9"]
+
     steps:
-    - uses: actions/checkout@v2
-    - name: Set up Python ${{ matrix.python }}
-      uses: actions/setup-python@v2
-      with:
-        python-version: ${{ matrix.python }}
-    - name: Install
-      run: |
-        CFLAGS="-O0" python -m pip install . --upgrade
-    - name: Run Tests
-      run: ./runtests.sh
+      - uses: actions/checkout@v2
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install -r test_requirements.txt
+
+      - name: Test
+        run: |
+          make test
