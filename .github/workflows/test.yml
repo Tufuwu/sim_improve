@@ -1,37 +1,28 @@
-name: Python CI
+name: Run Script
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
-  build:
+  run-script:
+
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: [2.6, 2.7, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8, 3.9]
-        include:
-          - python-version: 2.6
-            dist: trusty
-          - python-version: 3.2
-            dist: trusty
-          - python-version: 3.3
-            dist: trusty
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@v2
+    - name: Checkout repository
+      uses: actions/checkout@v4
 
-    - name: Setup Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
+    - name: Set up Python 3.x
+      uses: actions/setup-python@v5
       with:
-        python-version: ${{ matrix.python-version }}
+        python-version: '3.x'
 
-    - name: Install Dependencies
+    - name: Run script
       run: |
-        python -m pip install --upgrade pip
-        pip install -e .
-
-    - name: Run Tests
-      run: |
-        cd tests
-        python test_cvss2.py
-        python test_cvss3.py
+        echo "from Default.settings import *" > settings.py
+        ./generate.py
