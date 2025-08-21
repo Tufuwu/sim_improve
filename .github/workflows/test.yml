@@ -1,27 +1,55 @@
-name: Lint
+name: CI
 
-on: [push, pull_request]
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ["3.6"]
-    steps:
-      - uses: actions/checkout@v2
 
+  build:
+
+    name: Python ${{ matrix.python-version }}
+    runs-on: ubuntu-22.04
+
+    strategy:
+      matrix:
+        python-version: ["2.7", "3.5", "3.6", "3.7", "3.8", "3.9-dev"]
+      fail-fast: false
+
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
-
-      - name: Install dependencies
+      - name: Install system dependencies
         run: |
-          python -m pip install -U pip
-          python -m pip install -U flake8
-
-      - name: Lint
+          sudo apt-get -qq update
+          sudo apt-get install -y graphviz python-tk python-matplotlib
+      - name: Install Python dependencies
         run: |
-          flake8 . --max-line-length=120 --exclude .git,lib,__pycache__
+          pip install Sphinx
+          pip install recommonmark
+          pip install pep8
+          pip install coverage
+          pip install coveralls
+          pip install numpy
+      - name: Run tests
+        run: |
+          python -Wall setup.py try
+          python setup.py install
+          python -Wall setup.py test
+          COVERAGE=1 coverage run test/runtest.py
+          python run.py --doctest
+          python run.py --html
+      - name: Run after script
+        run: pep8 --exclude=asizeof.py,metadata.py,bottle*.py --max-line-length=80 pympler
+      - name: Run coveralls
+        if: success()
+        run: coveralls
