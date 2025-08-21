@@ -1,22 +1,18 @@
-name: Python CI
+name: CI
 
 on:
   push:
     branches:
       - main
   pull_request:
-    branches:
-      - main
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     strategy:
       matrix:
-        python-version: [2.7, 3.6, 3.7, 3.8]
-        requirements:
-          - minimal_requirements.txt
-          - requirements.txt
+        python-version: ["3.6"]
 
     steps:
       - uses: actions/checkout@v2
@@ -28,17 +24,14 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install -r ${{ matrix.requirements }}
-          pip install --upgrade pytest
-          pip install pytest-cov codecov
-
-      - name: Set MPLBACKEND
-        run: echo "MPLBACKEND=Agg" >> $GITHUB_ENV
+          sudo apt-get -qq update
+          sudo apt-get install -y libeigen3-dev
+          pip install -r requirements.txt
+          pip install pytest pytest-cov pytest-randomly wheel codecov
+          pip install -e .
 
       - name: Run tests
-        run: python -m pytest --cov=fgivenx
+        run: make coverage
 
       - name: Upload coverage to Codecov
-        run: |
-          codecov
-          bash <(curl -s https://codecov.io/bash)
+        uses: codecov/codecov-action@v1
