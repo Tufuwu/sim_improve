@@ -1,28 +1,29 @@
-name: Python CI
+name: Documentation
 
-on: [push, pull_request, workflow_dispatch]
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
 
 jobs:
-  test:
+  build:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ["2.7", "3.4", "3.5", "3.6", "3.7", "3.8", "3.9"]
-
     steps:
       - uses: actions/checkout@v2
-
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Setup Python
         uses: actions/setup-python@v2
         with:
-          python-version: ${{ matrix.python-version }}
-
+          python-version: 3.6
       - name: Install dependencies
         run: |
-          python -m pip install -U pip
-          pip install -r .req
-
-      - name: Test
+          pip3 install doc8 sphinx
+          pip3 install git+https://github.com/osrf/sphinx-tabs
+          pip3 install sphinx_multiversion
+      - name: Build documentation
         run: |
-          make test PYTHON=python
+          make html 2> stderr.log
+          cat stderr.log
+          doc8 --ignore D001 --ignore-path build --ignore-path source/Tutorials/Actions
+          doc8 --ignore D000 --ignore D001 --ignore-path build source/Tutorials/Actions
+          if [ -s "stderr.log" ]; then false; fi
