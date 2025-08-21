@@ -1,31 +1,30 @@
-name: Python application
+on: [push, pull_request]
 
-on:
-  push:
-    branches:
-      - main
-  pull_request:
+name: CI
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [2.7, 3.4, 3.5, 3.6, 3.7]
+        python-version: [3.5, 3.6, 3.7]
+        env: [cover, black]
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install flask peewee
-
-      - name: Run tests
-        run: python runtests.py
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        npm i -g elm
+        pip install tox-travis
+    - name: Run tests
+      run: |
+        export TOXENV=${{ matrix.env }}
+        tox
+    - name: Upload coverage to Coveralls
+      if: success()
+      run: coveralls
