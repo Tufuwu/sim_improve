@@ -1,98 +1,45 @@
 name: CI
-
 on:
   push:
-    branches: [main]
+    branches:
+      - main
   pull_request:
-    branches: [main]
-
+    branches:
+      - main
 jobs:
-  test:
-    runs-on: ubuntu-latest
+  Build:
+    runs-on: ubuntu-22.04
     strategy:
-      fail-fast: false
       matrix:
-        python-version: [3.6, 3.8, 3.9]
-
+        python-version:
+          - '3.5'
+          - '3.6'
+          - '3.7'
+          - '3.8'
+          - 'nightly'
+        django-version:
+          - '2.2'
+          - '3.0'
+          - 'main'
+        include:
+          - python-version: '3.7'
+            toxenv: docs
+          - python-version: '3.7'
+            toxenv: quality
+      fail-fast: false
     steps:
-    - name: Checkout
-      uses: actions/checkout@v2
-
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
-      with:
-        python-version: ${{ matrix.python-version }}
-
-    - name: Install dependencies
-      run: |
-        pip install -r requirements.txt
-        pip install -r tests/requirements.txt
-        python setup.py -q install
-
-    - name: Run tests
-      run: nosetests --with-coverage --cover-package=btcde
-
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v2
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
-
-  test-release:
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: test
-    steps:
-    - name: Checkout
-      uses: actions/checkout@v2
-      with:
-        fetch-depth: 0
-
-    - name: Set up Python 3.8
-      uses: actions/setup-python@v2
-      with:
-        python-version: 3.8
-
-    - name: Install dependencies
-      run: |
-        pip install -r requirements.txt
-        pip install -r tests/requirements.txt
-        python setup.py -q install
-
-    - name: Publish to Test PyPI
-      env:
-        TWINE_USERNAME: __token__
-        TWINE_PASSWORD: ${{ secrets.TEST_PYPI_TOKEN }}
-      run: |
-        python -m pip install --upgrade twine
-        python setup.py sdist bdist_wheel
-        twine upload --repository-url https://test.pypi.org/legacy/ dist/*
-
-  release:
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
-    needs: [test, test-release]
-    steps:
-    - name: Checkout
-      uses: actions/checkout@v2
-      with:
-        fetch-depth: 0
-
-    - name: Set up Python 3.8
-      uses: actions/setup-python@v2
-      with:
-        python-version: 3.8
-
-    - name: Install dependencies
-      run: |
-        pip install -r requirements.txt
-        pip install -r tests/requirements.txt
-        python setup.py -q install
-
-    - name: Publish to PyPI
-      env:
-        TWINE_USERNAME: __token__
-        TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
-      run: |
-        python -m pip install --upgrade twine
-        python setup.py sdist bdist_wheel
-        twine upload dist/*
+      - uses: actions/setup-python@v2
+        with:
+          python-version: '${{ matrix.python-version }}'
+      - uses: actions/checkout@v2
+      - run: |
+          if [ -z "${{ matrix.toxenv }}" ]; then
+            echo "DJANGO=${{ matrix.django-version }}" >> $GITHUB_ENV
+          else
+            echo "TOXENV=${{ matrix.toxenv }}" >> $GITHUB_ENV
+          fi
+      - run: pip install tox tox-gh-actions
+      - run: tox
+    allow_failures:
+      - python-version: 'nightly'
+      - django-version: 'main'
