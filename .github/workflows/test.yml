@@ -1,45 +1,35 @@
-name: Python Package
+name: CI
 
-on:
-  push:
-    tags:
-      - '*'
+on: [push, pull_request, workflow_dispatch]
 
 jobs:
   build:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: true
       matrix:
-        python-version: ['2.6', '2.7', '3.3', '3.4', '3.5', '3.6', 'nightly']
+        python-version: ["3.6", "3.7"]
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
+
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
+          cache: pip
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install simplejson minimock coverage
-      - name: Run tests
-        run: make test
+          pip install --upgrade black
+          pip install --upgrade flake8
+          pip install --upgrade -r requirements.txt
 
-  deploy:
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - uses: actions/checkout@v2
-      - name: Set up Python 3.x
-        uses: actions/setup-python@v2
-        with:
-          python-version: '3.x'
-      - name: Publish to PyPI
-        env:
-          TWINE_USERNAME: gpodder
-          TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+      - name: Run static analysis
         run: |
-          python -m pip install --upgrade pip
-          pip install twine
-          python setup.py sdist bdist_wheel
-          twine upload dist/*
+          flake8 --statistics --count
+          black --check --diff --target-version py36 .
+
+      - name: Dummy run
+        run: python random_street_view.py --help
