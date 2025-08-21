@@ -1,38 +1,59 @@
-on: [push, pull_request]
+name: Run tests
 
-name: Django Tests
+on:
+  push:
+    branches:
+      - main
+      - /^v\d+\.\d+(\.(\d|x)+)?(-\S*)?$/
+  pull_request:
 
 jobs:
-  test:
-    runs-on: ubuntu-22.04
+  build:
+    runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         python-version: [3.5, 3.6, 3.7, 3.8, pypy3]
-        django-version: [2.2, 3.0, 3.1, main]
-        exclude:
-          - python-version: 3.5
-            django-version: 3.0
-          - python-version: 3.5
-            django-version: 3.1
-          - python-version: 3.5
-            django-version: main
+        env:
+          - TOXENV=lint,docs
+          - TOXENV=django20-py35-all
+          - TOXENV=django20-py36-all
+          - TOXENV=django20-pypy3-all
+          - TOXENV=django21-py35-all
+          - TOXENV=django21-py36-all
+          - TOXENV=django21-py37-all
+          - TOXENV=django21-pypy3-all
+          - TOXENV=django22-py35-all
+          - TOXENV=django22-py36-all
+          - TOXENV=django22-py37-all
+          - TOXENV=django22-pypy3-all
+          - TOXENV=django30-py36-all
+          - TOXENV=django30-py37-all
+          - TOXENV=django30-py38-all
+          - TOXENV=django30-pypy3-all
+          - TOXENV=django31-py36-all
+          - TOXENV=django31-py37-all
+          - TOXENV=django31-py38-all RUN_LIVE_TESTS=true
+          - TOXENV=django31-pypy3-all
+          - TOXENV=djangoDev-py37-all
+          - TOXENV=django31-py37-none
+          - TOXENV=django31-py37-amazon_ses
+          - TOXENV=django22-py37-all-old_urllib3
+
     steps:
-    - uses: actions/checkout@v2
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
-      with:
-        python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install tox-travis
-    - name: Test with tox
-      run: |
-        export DJANGO=${{ matrix.django-version }}
-        tox
-    allow_failures:
-      - python-version: pypy3
-      - django-version: main
-    cache:
-      paths:
-        - ~/.cache/pip
+      - uses: actions/checkout@v3
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install tox
+      - name: Test with tox
+        env:
+          TOXENV: ${{ matrix.env }}
+        run: tox
+
+  allow_failures:
+    - env: TOXENV=djangoDev-py37-all
