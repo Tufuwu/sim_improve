@@ -1,22 +1,45 @@
 name: CI
+
 on:
   push:
-    branches:
-      - main
+    branches: ["main"]
   pull_request:
+    branches: ["main"]
+  workflow_dispatch:
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
+  tests:
+    name: "Python ${{ matrix.python-version }}"
+    runs-on: "ubuntu-latest"
+
     strategy:
       matrix:
-        python-version: [3.9, 3.8, 3.7]
+        python-version: ["2.7", "3.4", "3.5", "3.6", "3.7", "3.8", "pypy-2.7", "pypy-3.6"]
+        include:
+          - python-version: "3.5"
+            env: TOXENV: "py27-cover,py35-cover,coverage"
+          - python-version: "3.5"
+            env: TOXENV: "docs"
+          - python-version: "2.7"
+            env: TOXENV: "py27-pyramid14"
+          - python-version: "3.5"
+            env: TOXENV: "py35-pyramid19"
+
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
+      - uses: "actions/checkout@v2"
+      - uses: "actions/setup-python@v2"
         with:
-          python-version: ${{ matrix.python-version }}
-      - name: Install dependencies
-        run: pip install . -r requirements.txt
-      - name: Run tests
-        run: pytest
+          python-version: "${{ matrix.python-version }}"
+      - name: "Install dependencies"
+        run: |
+          python -m pip install --upgrade pip setuptools tox
+      - name: "Run tox"
+        run: "tox"
+
+  notifications:
+    email:
+      recipients:
+        - "pyramid-checkins@lists.repoze.org"
+    irc:
+      channels:
+        - "chat.freenode.net#pyramid"
