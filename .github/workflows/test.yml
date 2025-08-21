@@ -1,25 +1,31 @@
-name: Python CI
-on: [push, pull_request]
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
 jobs:
-  build:
-    runs-on: ubuntu-latest
+  test:
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
-        include:
-          - python: 2.7
-          - python: 3.4
-          - python: 3.5
-          - python: 3.6
-          - python: pypy2.7-7.3.1
-          - python: pypy3.6-7.3.1
-          - python: 3.7
-          - python: 3.8
-          - python: 3.9-dev
-    name: Python ${{ matrix.python }}
+        python-version:
+          - "3.6"
+          - "3.7"
+          - "3.8"
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Install Python
+        uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python }}
-      - run: pip install tox
-      - run: tox -e py
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install tox
+        run: pip install tox
+
+      - name: Run tests
+        run: tox -e ${{ matrix.python-version == '3.8' && 'py38,docs,style' || 'py' + matrix.python-version.replace('.', '') }}
