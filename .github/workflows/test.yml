@@ -1,33 +1,21 @@
-name: CI
+name: Python
 
-on:
-  push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
-  workflow_dispatch:
+on: [push]
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
-    services:
-      docker:
-        image: docker:stable
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.7]
     steps:
-      - uses: actions/checkout@v2
-      - name: Set up Python 3.9
-        uses: actions/setup-python@v2
-        with:
-          python-version: 3.9
-      - name: Install Docker
-        run: |
-          sudo apt-get update
-          sudo apt-get -y -o Dpkg::Options::="--force-confnew" install docker-ce
-      - name: Build Docker Image
-        run: docker build -t draft-kings-fun .
-      - name: Run Flake8
-        run: docker run draft-kings-fun flake8 draftfast
-      - name: Run Tests
-        run: docker run draft-kings-fun nosetests --with-coverage --cover-package=.
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install dependencies
+      run: make install-deps
+    - name: Build
+      run: make
