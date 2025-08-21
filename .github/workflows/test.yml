@@ -1,27 +1,28 @@
-name: "Python CI"
-
+name: python-tests
 on:
   push:
     branches:
       - main
   pull_request:
+    branches:
+      - main
 
 jobs:
-  build-test:
-    runs-on: ubuntu-22.04
-    container: python:3.6-slim
+  build:
+
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["2.7", "3.4", "3.5", "3.6", "3.7", "3.8", "nightly", "pypy"]
+
     steps:
-      - name: Check out code
-        uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
-      - name: Install pip dependencies
-        run: |
-          pip install -r requirements-dev.txt
-          pip install -e .
-      - name: Run tests
-        run: pytest pywnedpasswords/tests/
-      - name: Lint with flake8
-        run: flake8 pywnedpasswords
-      - name: Check code style with black
-        run: black --safe --check
+
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Run setconf.py
+      run: ./setconf.py --test
+    - name: Run test.sh
+      run: cd testcases && ./test.sh
