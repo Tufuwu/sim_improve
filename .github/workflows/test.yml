@@ -1,28 +1,52 @@
-name: Test
+name: Lint and Test
 
-on: [push, pull_request, workflow_dispatch]
+on:
+  push:
+    branches:
+      - main
 
 jobs:
+  linter:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.7]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install flake8
+        run: pip install flake8
+
+      - name: Lint with flake8
+        run: flake8 etip/
+
   test:
     runs-on: ubuntu-latest
     strategy:
-      fail-fast: false
       matrix:
-        python-version: ["2.7", "3.6", "3.7", "3.8", "3.9"]
+        python-version: [3.6, 3.7]
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
 
       - name: Install dependencies
-        run: |
-          pip install -r requirements.txt
-          pip install -r test_requirements.txt
+        run: pip install -r requirements.txt
 
-      - name: Test
+      - name: Set environment variables
+        run: echo "DJANGO_SETTINGS_MODULE=etip.settings.dev" >> $GITHUB_ENV
+
+      - name: Run tests
         run: |
-          make test
+          cd etip/
+          python manage.py test
