@@ -1,3 +1,5 @@
+name: CI
+
 on:
   push:
     branches: ["main"]
@@ -7,53 +9,42 @@ on:
 
 jobs:
   tests:
-    name: "Python ${{ matrix.python-version }} on ${{ matrix.arch }}"
-    runs-on: ${{ matrix.os }}
+    name: "Python ${{ matrix.python-version }}"
+    runs-on: "ubuntu-22.04"
+
     strategy:
-      fail-fast: false
       matrix:
+        python-version: ["2.7", "3.5", "3.6", "3.7", "3.8", "3.9-dev"]
         include:
-          - python-version: "3.5"
-            arch: "x86_64"
-            os: "ubuntu-latest"
-          - python-version: "3.6"
-            arch: "x86_64"
-            os: "ubuntu-latest"
           - python-version: "3.7"
-            arch: "x86_64"
-            os: "ubuntu-latest"
-          - python-version: "3.8"
-            arch: "x86_64"
-            os: "ubuntu-latest"
-          - python-version: "3.9-dev"
-            arch: "x86_64"
-            os: "ubuntu-latest"
-          - python-version: "3.5"
-            arch: "ppc64le"
-            os: "ubuntu-latest"
-          - python-version: "3.6"
-            arch: "ppc64le"
-            os: "ubuntu-latest"
+            env: TOXENV=black
+          - python-version: "2.7"
+            env: TOXENV=pep8py2
           - python-version: "3.7"
-            arch: "ppc64le"
-            os: "ubuntu-latest"
-          - python-version: "3.8"
-            arch: "ppc64le"
-            os: "ubuntu-latest"
-          - python-version: "3.9-dev"
-            arch: "ppc64le"
-            os: "ubuntu-latest"
+            env: TOXENV=pep8py3
+          - python-version: "3.7"
+            env: TOXENV=doc
+
     steps:
       - uses: "actions/checkout@v2"
       - uses: "actions/setup-python@v2"
         with:
           python-version: "${{ matrix.python-version }}"
-      - name: "Update pip"
-        run: python -m pip install --upgrade pip setuptools wheel
-      - name: "Install tox dependencies"
-        run: python -m pip install --upgrade tox codecov
-      - name: "Run tox for ${{ matrix.python-version }}"
-        run: "tox -e py${{ matrix.python-version }/./}"
+      - name: "Install dependencies"
+        run: |
+          python -m pip install --upgrade pip setuptools
+          python -m pip install tox codecov
+      - name: "Run tox"
+        run: "tox"
+
+  coverage:
+    runs-on: "ubuntu-22.04"
+    needs: tests
+    steps:
+      - uses: "actions/checkout@v2"
+      - uses: "actions/setup-python@v2"
+        with:
+          python-version: "3.7"
       - name: "Upload coverage to Codecov"
         uses: "codecov/codecov-action@v1"
         with:
