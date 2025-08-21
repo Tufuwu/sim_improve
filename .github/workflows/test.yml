@@ -1,217 +1,34 @@
-name: CI Testing
+name: Python package
+
 on:
-  pull_request:
-    branches:
-      - main
   push:
-    branches:
-      - main
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
 
 jobs:
-  test:
-    name: "Python ${{ matrix.python }} Mode ${{ matrix.mode }} Django ${{ matrix.django }}"
+  build:
+
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - python: "3.6"
-            mode: "flake8"
-            django: "dj22"
-          - python: "3.6"
-            mode: "flake8-strict"
-            django: "dj22"
-          - python: "3.6"
-            mode: "docs"
-            django: "dj22"
-          - python: "3.6"
-            mode: "flake8"
-            django: "dj30"
-          - python: "3.6"
-            mode: "flake8-strict"
-            django: "dj30"
-          - python: "3.6"
-            mode: "docs"
-            django: "dj30"
-          - python: "3.6"
-            mode: "flake8"
-            django: "dj31"
-          - python: "3.6"
-            mode: "flake8-strict"
-            django: "dj31"
-          - python: "3.6"
-            mode: "docs"
-            django: "dj31"
-          - python: "3.6"
-            mode: "flake8"
-            django: "dj32"
-          - python: "3.6"
-            mode: "flake8-strict"
-            django: "dj32"
-          - python: "3.6"
-            mode: "docs"
-            django: "dj32"
-          - python: "3.6"
-            mode: "flake8"
-            django: "djdev"
-          - python: "3.6"
-            mode: "flake8-strict"
-            django: "djdev"
-          - python: "3.6"
-            mode: "docs"
-            django: "djdev"
-          - python: "3.7"
-            mode: "flake8"
-            django: "dj22"
-          - python: "3.7"
-            mode: "flake8-strict"
-            django: "dj22"
-          - python: "3.7"
-            mode: "docs"
-            django: "dj22"
-          - python: "3.7"
-            mode: "flake8"
-            django: "dj30"
-          - python: "3.7"
-            mode: "flake8-strict"
-            django: "dj30"
-          - python: "3.7"
-            mode: "docs"
-            django: "dj30"
-          - python: "3.7"
-            mode: "flake8"
-            django: "dj31"
-          - python: "3.7"
-            mode: "flake8-strict"
-            django: "dj31"
-          - python: "3.7"
-            mode: "docs"
-            django: "dj31"
-          - python: "3.7"
-            mode: "flake8"
-            django: "dj32"
-          - python: "3.7"
-            mode: "flake8-strict"
-            django: "dj32"
-          - python: "3.7"
-            mode: "docs"
-            django: "dj32"
-          - python: "3.7"
-            mode: "flake8"
-            django: "djdev"
-          - python: "3.7"
-            mode: "flake8-strict"
-            django: "djdev"
-          - python: "3.7"
-            mode: "docs"
-            django: "djdev"
-          - python: "3.8"
-            mode: "flake8"
-            django: "dj22"
-          - python: "3.8"
-            mode: "flake8-strict"
-            django: "dj22"
-          - python: "3.8"
-            mode: "docs"
-            django: "dj22"
-          - python: "3.8"
-            mode: "flake8"
-            django: "dj30"
-          - python: "3.8"
-            mode: "flake8-strict"
-            django: "dj30"
-          - python: "3.8"
-            mode: "docs"
-            django: "dj30"
-          - python: "3.8"
-            mode: "flake8"
-            django: "dj31"
-          - python: "3.8"
-            mode: "flake8-strict"
-            django: "dj31"
-          - python: "3.8"
-            mode: "docs"
-            django: "dj31"
-          - python: "3.8"
-            mode: "flake8"
-            django: "dj32"
-          - python: "3.8"
-            mode: "flake8-strict"
-            django: "dj32"
-          - python: "3.8"
-            mode: "docs"
-            django: "dj32"
-          - python: "3.8"
-            mode: "flake8"
-            django: "djdev"
-          - python: "3.8"
-            mode: "flake8-strict"
-            django: "djdev"
-          - python: "3.8"
-            mode: "docs"
-            django: "djdev"
-        exclude:
-          - python: "3.5"
-            mode: "flake8"
-            django: "dj30"
-          - python: "3.5"
-            mode: "flake8-strict"
-            django: "dj30"
-          - python: "3.5"
-            mode: "docs"
-            django: "dj30"
-          - python: "3.5"
-            mode: "flake8"
-            django: "dj31"
-          - python: "3.5"
-            mode: "flake8-strict"
-            django: "dj31"
-          - python: "3.5"
-            mode: "docs"
-            django: "dj31"
-          - python: "3.5"
-            mode: "flake8"
-            django: "dj32"
-          - python: "3.5"
-            mode: "flake8-strict"
-            django: "dj32"
-          - python: "3.5"
-            mode: "docs"
-            django: "dj32"
-          - python: "3.5"
-            mode: "flake8"
-            django: "djdev"
-          - python: "3.5"
-            mode: "flake8-strict"
-            django: "djdev"
-          - python: "3.5"
-            mode: "docs"
-            django: "djdev"
-      allow_failures:
-        - django: "djdev"
-        - mode: "flake8-strict"
+        python-version: ["3.5", "3.6", "3.7", "3.8"]
 
     steps:
-      - name: Install dependencies
-        run: sudo apt-get update && sudo apt-get install -y binutils libproj-dev gdal-bin libsqlite3-mod-spatialite
-
-      - name: Checkout code
-        uses: actions/checkout@v2
-
-      - name: Setup Python ${{ matrix.python }}
-        uses: actions/setup-python@v2
-        with:
-          python-version: ${{ matrix.python }}
-
-      - name: Install Packages
-        run: |
-          python -m pip install -U pip
-          python -m pip install -U wheel virtualenv
-          python -m pip install tox coveralls
-
-      - name: Run Tests
-        run: |
-          apt list --installed
-          coverage erase
-          tox -e py${{ matrix.python }}-${{ matrix.django }}${{ matrix.mode }}
-          coveralls
+    - uses: actions/checkout@v3
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v3
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt -r test-requirements.txt
+    - name: Run tests
+      run: |
+        py.test --cov tdclient tdclient/test
+    - name: Upload coverage to Coveralls
+      env:
+        COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
+      run: coveralls
