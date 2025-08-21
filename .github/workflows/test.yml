@@ -1,37 +1,31 @@
-name: ci
-on:
-  push:
-    branches:
-      - main
-  workflow_dispatch:
+name: Python package
+
+on: [push]
 
 jobs:
-  flake8:
-    runs-on: ubuntu-22.04
+  build:
+
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.5, 3.6, 3.7, 3.8]
+
     steps:
-      - name: Check out repository code
-        uses: actions/checkout@v2
-
-      - name: Set up Python 3.7
-        uses: actions/setup-python@v2
-        with:
-          python-version: 3.7
-
-      - name: Install Flake8
-        run: pip install flake8
-
-      - name: Run Flake8
-        run: flake8
-
-  dockerfile_lint:
-    runs-on: ubuntu-22.04
-    services:
-      docker:
-        image: docker:19.03.12
-        options: --privileged
-    steps:
-      - name: Check out repository code
-        uses: actions/checkout@v2
-
-      - name: Lint Dockerfile
-        run: docker run -i hadolint/hadolint:v1.19.0-45-gef91156-alpine < Dockerfile
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        pip install -r requirements.txt
+    - name: Test with pytest
+      run: |
+        pytest -v --cov=filestack tests
+    - name: Upload coverage to Coveralls
+      run: |
+        coveralls
+    - name: Send notifications
+      if: failure()
+      run: |
+        echo "Sending email notification to dev@filestack.com"
