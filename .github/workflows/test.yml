@@ -1,15 +1,20 @@
-on: [push, pull_request]
-
 name: CI
 
+on:
+  push:
+    branches:
+      - '**'  # run on all branches
+  pull_request:
+    branches:
+      - '**'  # run on all branches
+  workflow_dispatch:
+
 jobs:
-  test:
+  build:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.5, 3.6, 3.7]
-        env: [cover, black]
-
+        python-version: [3.6, 3.7, 3.8]
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.python-version }}
@@ -19,12 +24,6 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        npm i -g elm
         pip install tox-travis
     - name: Run tests
-      run: |
-        export TOXENV=${{ matrix.env }}
-        tox
-    - name: Upload coverage to Coveralls
-      if: success()
-      run: coveralls
+      run: tox
