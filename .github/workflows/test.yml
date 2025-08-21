@@ -1,7 +1,10 @@
-name: CI
+name: Python CI
 
 on:
   push:
+    branches:
+      - main
+  pull_request:
     branches:
       - main
 
@@ -10,47 +13,26 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.6, 3.5, 2.7]
-        package: 
-          - "django>=1.11,<1.12"
-          - "django>=2.0,<2.1"
-          - "django>=2.1,<2.2"
-          - "django>=2.2,<2.3"
-          - "django>=3.0,<3.1"
-      exclude:
-        - python-version: 2.7
-          package: "django>=2.0,<2.1"
-      allow_failures:
-        - python-version: 2.7
-          package: "django>=1.11,<1.12"
+        python-version: [3.5, 3.6, 3.7, 3.8, 3.9]
+        django-version: ["1.11.*", "2.0.*", "2.1.*", "2.2.*", "3.0.*", "3.1.*", "3.2.*"]
+        exclude:
+          - python-version: 3.5
+            django-version: "3.0.*"
+          - python-version: 3.5
+            django-version: "3.1.*"
+          - python-version: 3.5
+            django-version: "3.2.*"
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Cache pip
-        uses: actions/cache@v2
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip setuptools wheel
-          pip install ${{ matrix.package }} -e .[tests]
+          python -m pip install --upgrade pip
+          pip install django=="${{ matrix.django-version }}"
+          pip install requests
+          pip install -e .
       - name: Run tests
-        run: |
-          coverage run --rcfile=.coveragerc runtests.py
-      - name: Upload coverage to Codecov
-        if: success()
-        run: |
-          pip install codecov
-          codecov
-
-  notifications:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Send notifications
-        run: |
-          echo "Sending notifications..."
-          # Add your notification logic here
+        run: python runtests.py
