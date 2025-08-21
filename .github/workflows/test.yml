@@ -1,46 +1,29 @@
-name: python-ci
+name: Python CI
 
 on:
   push:
-    branches: ["main"]
+    branches:
+      - main
   pull_request:
-    branches: ["main"]
-  workflow_dispatch:
 
 jobs:
-  test:
-    runs-on: ubuntu-22.04
+  build:
+    runs-on: ubuntu-latest
     strategy:
-      fail-fast: false
       matrix:
-        python-version: ["3.6", "3.7", "3.9", "3.10"]
+        python-version: ["2.7", "3.4", "3.5", "3.6", "3.7"]
         include:
-          - python-version: "3.9"
-            package: "mock"
-            if: github.event_name == 'pull_request'
-          - python-version: "3.9"
-            package: "mock-core-configs"
-            if: github.event_name == 'pull_request'
-
+          - python-version: "3.6"
+            env: TOXENV=flake8
+          - python-version: "3.6"
+            env: TOXENV=isort
     steps:
-      - name: checkout-code
-        uses: actions/checkout@v3
-
-      - name: setup-python
-        uses: actions/setup-python@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-
-      - name: install-dependencies
-        run: |
-          pip install -r mock/requirements.txt
-          pip install pytest-cov
-
-      - name: run-tests
-        run: |
-          PYTHON=python${{ matrix.python-version }} ./mock/run-tests.sh
-
-      - name: copr-build
-        if: ${{ matrix.package }}
-        run: |
-          PACKAGE=${{ matrix.package }} .travis/copr-build
+      - run: pip install tox-travis
+      - run: pip install coveralls
+      - run: tox
+      - if: success() && steps.tox.outputs.coverage
+        run: coveralls
