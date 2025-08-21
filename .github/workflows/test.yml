@@ -1,33 +1,58 @@
+name: Build and Deploy
 on:
-  push: {}
-  pull_request:
-    types: [opened, reopened, synchronize]
-name: CI
+  push:
+    tags:
+      - '*'
+
 jobs:
-  test:
-    runs-on: ubuntu-latest
+  build:
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        python-version: ['3.7']
+        include:
+          - name: "Python 3.8.0 on Bionic Linux"
+            os: ubuntu-22.04
+            python-version: '3.8'
+          - name: "Linux ARMv8"
+            os: ubuntu-22.04
+            python-version: '3.8'
+            arch: arm64
+          - name: "Python 3.7.4 on macOS"
+            os: macos-latest
+            python-version: '3.7'
+          - name: "Python 3.8.0 on Windows"
+            os: windows-latest
+            python-version: '3.8'
+
     steps:
-    - name: Check out source code
+    - name: Checkout
       uses: actions/checkout@v2
-      with:
-        fetch-depth: 0
-    - name: Set up Python
-      uses: actions/setup-python@v2
+
+    - name: Setup Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
+
+    - name: Install Dependencies
       run: |
-        pip install -r requirements/ci.txt
-    - name: Run tests
+        python -m pip install --upgrade pip setuptools
+        pip install -r requirements.txt
+        pip install pyinstaller wheel
+
+    - name: Build
       run: |
-        coverage run manage.py test
-    - name: Generate coverage report
-      run: |
-        coverage report
-        coverage xml
-    - name: Upload coverage to Codecov
-      run: |
-        codecov --file coverage/coverage.xml
+        cd pyinstaller && ./bundle.sh
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: deploy/*
+      env:
+        GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
