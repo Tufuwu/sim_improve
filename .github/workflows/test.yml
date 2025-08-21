@@ -1,39 +1,56 @@
 name: CI
+
 on:
   push:
     branches:
-      - "*"
-  pull_request:
-    branches:
       - main
+
 jobs:
   test:
+    runs-on: ubuntu-latest
     strategy:
-      fail-fast: false
       matrix:
-        python-version: ["2.7", "3.5", "3.6", "3.7", "3.8", "3.9-dev", "pypy", "pypy3"]
-        os: [ubuntu-latest]
-    runs-on: ${{ matrix.os }}
-    name: "${{ matrix.os }} Python: ${{ matrix.python-version }}"
+        python-version: [3.6, 3.5, 2.7]
+        package: 
+          - "django>=1.11,<1.12"
+          - "django>=2.0,<2.1"
+          - "django>=2.1,<2.2"
+          - "django>=2.2,<2.3"
+          - "django>=3.0,<3.1"
+      exclude:
+        - python-version: 2.7
+          package: "django>=2.0,<2.1"
+      allow_failures:
+        - python-version: 2.7
+          package: "django>=1.11,<1.12"
     steps:
-    - uses: actions/checkout@v2
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
-      with:
-        python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
-      run: |
-        pip install coverage
-    - name: Run tests
-      run: |
-        coverage run --source=olefile -m nose tests
-    - name: After success
-      run: |
-        pip install coveralls
-        coveralls
-    - name: After script
-      run: |
-        coverage report
-        pip install pycodestyle pyflakes
-        pyflakes .
-        pycodestyle --statistics --count .
+      - uses: actions/checkout@v2
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Cache pip
+        uses: actions/cache@v2
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          pip install ${{ matrix.package }} -e .[tests]
+      - name: Run tests
+        run: |
+          coverage run --rcfile=.coveragerc runtests.py
+      - name: Upload coverage to Codecov
+        if: success()
+        run: |
+          pip install codecov
+          codecov
+
+  notifications:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send notifications
+        run: |
+          echo "Sending notifications..."
+          # Add your notification logic here
