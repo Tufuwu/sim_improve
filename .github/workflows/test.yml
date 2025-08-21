@@ -1,35 +1,37 @@
-name: CI
+name: Python package
 
 on:
   push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+    branches:
+      - main
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
+
+    runs-on: ubuntu-latest
     strategy:
-      fail-fast: false
+      max-parallel: 4
       matrix:
-        python-version:
-          - "3.6"
-          - "3.7"
-          - "3.8"
-          - "3.9"
-        include:
-          - python-version: "3.9"
-            env: TOXENV=mypy
+        python-version: [2.7, 3.5, 3.6, 3.7, 3.8, 3.9, pypy, pypy3]
+
     steps:
-      - uses: actions/checkout@v3
-      - name: Setup Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ matrix.python-version }}
-      - name: Install dependencies
-        run: pip install tox-travis codecov
-      - name: Run tests
-        run: tox -v
-      - name: Upload coverage to Codecov
-        if: success()
-        run: codecov
+    - uses: actions/checkout@v1
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Cache Hypothesis directory
+      uses: actions/cache@v2
+      with:
+        path: ${{ github.workspace }}/.hypothesis
+        key: ${{ runner.os }}-hypothesis-${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install --upgrade --upgrade-strategy only-if-needed pytest pytest-catchlog
+        pip install .
+    - name: Run tests
+      env:
+        HYPOTHESIS_STORAGE_DIRECTORY: ${{ github.workspace }}/.hypothesis
+      run: |
+        pytest
