@@ -1,24 +1,33 @@
-name: Python Package
+name: CI
 
 on:
   push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+    tags:
+      - '*'
 
 jobs:
   build:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [2.7]
+        python-version: [2.7, 3.6]
     steps:
-      - uses: actions/checkout@v2
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v1
-        with:
-          python-version: ${{ matrix.python-version }}
-      - name: Install dependencies
-        run: pip install -U .
-      - name: Run tests
-        run: python -m unittest discover
+    - uses: actions/checkout@v1
+    - name: Set up Python
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        sudo apt-get -qq update
+        sudo apt-get install -y libicu-dev
+        pip install -e .
+        pip install pyicu coverage nose twine
+    - name: Run tests
+      run: |
+        nosetests --with-coverage --cover-package=fingerprints --cover-erase
+    - name: Publish a Python distribution to PyPI
+      if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags')
+      run: |
+        python setup.py sdist bdist_wheel
+        twine upload dist/*
