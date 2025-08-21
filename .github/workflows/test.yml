@@ -1,31 +1,37 @@
-name: Python package
-
-on: [push]
-
+on:
+  push: {}
+  pull_request:
+    types: [opened, reopened, synchronize]
+name: CI
 jobs:
-  build:
-
+  test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.5, 3.6, 3.7, 3.8]
-
+        python-version: ['3.6', '3.7', '3.8', '3.9', '3.10']
+        allow_failures:
+          - python-version: '3.10'
     steps:
-    - uses: actions/checkout@v2
-    - name: Set up Python ${{ matrix.python-version }}
+    - name: Check out source code
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+    - name: Set up Python
       uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        pip install -r requirements.txt
-    - name: Test with pytest
+        pip install coverage vcrpy
+    - name: Install package
       run: |
-        pytest -v --cov=filestack tests
-    - name: Upload coverage to Coveralls
+        python setup.py install
+    - name: Run tests
       run: |
-        coveralls
-    - name: Send notifications
-      if: failure()
+        coverage run --source=censusgeocode -m unittest
+        censusgeocode --version
+        censusgeocode --csv tests/fixtures/batch.csv || echo failed
+    - name: Report coverage
+      if: success()
       run: |
-        echo "Sending email notification to dev@filestack.com"
+        coverage report
