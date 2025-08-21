@@ -1,42 +1,66 @@
-name: Python CI
+name: CI
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - "*"
 
 jobs:
-  build:
-    runs-on: ${{ matrix.os }}
+  test:
+    runs-on: ubuntu-22.04
     strategy:
+      fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
-        python-version: [3.6, 3.7, 3.8, 3.9, pypy3]
-        include:
-          - os: windows-latest
-            python-version: 3.8
-            before_install: choco install python --version 3.8.0
-          - os: windows-latest
-            python-version: 3.9
-            before_install: choco install python --version 3.9.0
+        python-version: [3.7, 3.8, 3.9, 3.10]
+        env:
+          TOXENV: [py37-dj32, py38-dj32, py39-dj32, py310-dj32]
 
     steps:
-      - uses: actions/checkout@v2
-
-      - name: Setup Python
-        uses: actions/setup-python@v2
+      - uses: actions/checkout@v3
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
+          cache: pip
 
       - name: Install dependencies
         run: |
-          if [ -n "${{ matrix.before_install }}" ]; then
-            ${{ matrix.before_install }}
-          fi
-          python -m pip install --upgrade pip
-          pip install coverage coveralls
+          pip install coverage codecov coveralls tox
 
       - name: Run tests
         run: |
-          coverage run -m unittest discover -s lexpy/tests
-          coverage report -i -m
+          ./bin/fake-server &
+          tox
 
-      - name: Coveralls
+      - name: Upload coverage to Coveralls
         run: coveralls
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+
+  deploy:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && contains(github.event.head_commit.message, 'Release')
+    runs-on: ubuntu-22.04
+    needs: test
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.10
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          pip install coverage codecov coveralls tox
+
+      - name: Deploy to PyPI
+        env:
+          TWINE_USERNAME: apsl
+          TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+        run: |
+          tox
+          python -m twine upload --skip-existing dist/*
