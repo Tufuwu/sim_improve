@@ -1,38 +1,13 @@
 name: Python CI
 
-on:
-  push:
-    branches:
-      - main
-      - dev
-  pull_request:
-    branches:
-      - main
-      - dev
+on: [push, pull_request, workflow_dispatch]
 
 jobs:
   test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.6, 3.7, 3.8, pypy3]
-        test-suite: [
-          "adddelete",
-          "compartmentedmodel",
-          "networkdynamics",
-          "sir",
-          "sirs",
-          "sir_fixedrecovery",
-          "sis",
-          "sis_fixedrecovery",
-          "seir",
-          "stochasticrates",
-          "monitor",
-          "generators",
-          "loci",
-          "adddelete",
-          "percolate"
-        ]
+        python-version: ["3.5", "3.6", "3.7", "3.8", "3.9", "3.10"]
 
     steps:
       - uses: actions/checkout@v2
@@ -44,14 +19,14 @@ jobs:
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install coveralls
+          python setup.py --quiet install
+          pip --quiet install -r test-requirements.txt
 
       - name: Run tests
         run: |
-          python setup.py install
-          coverage run --include './epydemic/*' -m nose test/test_${{ matrix.test-suite }}.py
+          python setup.py --quiet test
 
-      - name: Upload coverage to Coveralls
-        run: coveralls
+      - name: Coverage
+        run: |
+          coverage run --source circlify tests.py
+          coveralls
