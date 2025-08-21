@@ -1,32 +1,38 @@
 name: Python CI
 
-on: [push, pull_request, workflow_dispatch]
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "0 0 * * 0"  # Every Sunday at midnight
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.5", "3.6", "3.7"]
+        python-version: ["3.7", "3.8", "3.9", "pypy3"]
+        django-version: ["Django>=2.2,<2.3", "Django>=3.0,<3.2", "Django>=3.2,<3.3"]
+
+    services:
+      mongodb:
+        image: mongo:latest
+        ports:
+          - 27017:27017
 
     steps:
-      - uses: actions/checkout@v3
-
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ matrix.python-version }}
-          cache: pip
-
-      - name: Install dependencies
-        run: |
-          python -m pip install -U pip
-          python3 setup.py install
-          sudo apt-get -y update
-          pip install pytest-cov
-          pip install .[ja]
-
-      - name: Run tests
-        run: |
-          python3 -m pytest
-          ./test.sh
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install Poetry
+      run: pip install poetry
+    - name: Install dependencies
+      run: |
+        poetry install -q
+        poetry run pip install -q ${{ matrix.django-version }}
+    - name: Run tests
+      run: poetry run python -m pytest
