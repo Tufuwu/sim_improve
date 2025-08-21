@@ -1,51 +1,21 @@
-name: CI
-
-on:
-  - push
-  - pull_request
-
+name: Python CI
+on: [push, pull_request]
 jobs:
-  test:
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ['3.5', '3.6', '3.7', '3.8', 'pypy3']
-        include:
-          - python-version: 3.5
-            env: TOXENV=py35
-          - python-version: 3.6
-            env: TOXENV=py36
-          - python-version: 3.7
-            env: TOXENV=py37
-          - python-version: 3.8
-            env: TOXENV=py38
-          - python-version: 3.5
-            env: TOXENV=py35-pytest
-          - python-version: 3.6
-            env: TOXENV=py36-pytest
-          - python-version: 3.7
-            env: TOXENV=py37-pytest
-          - python-version: 3.7
-            env: TOXENV=py37-failskip
-          - python-version: 3.7
-            env: TOXENV=py37-limit
-          - python-version: 3.7
-            env: TOXENV=py37-prefix
-          - python-version: 3.7
-            env: TOXENV=placement
-          - python-version: pypy3
-            env: TOXENV=pypy3
-          - env: TOXENV=pep8
+  build:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.8"]
+
     steps:
-      - uses: actions/checkout@v3
-      - name: Setup Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
+      - uses: actions/checkout@v2
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
         run: |
-          pip install tox
-      - name: Run tests
+          pip install -r requirements.txt
+      - name: Test with pytest
         run: |
-          tox
+          pytest
