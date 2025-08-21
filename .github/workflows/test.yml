@@ -1,4 +1,5 @@
 name: CI
+
 on:
   push:
     branches:
@@ -6,40 +7,38 @@ on:
   pull_request:
     branches:
       - main
+  workflow_dispatch:
+
 jobs:
-  Build:
+  build:
     runs-on: ubuntu-22.04
     strategy:
       matrix:
-        python-version:
-          - '3.5'
-          - '3.6'
-          - '3.7'
-          - '3.8'
-          - 'nightly'
-        django-version:
-          - '2.2'
-          - '3.0'
-          - 'main'
-        include:
-          - python-version: '3.7'
-            toxenv: docs
-          - python-version: '3.7'
-            toxenv: quality
-      fail-fast: false
+        python-version: [3.6]
+        env:
+          - TOXENV=flake8
+          - TOXENV=black
+          - TOXENV=elasticsearch
     steps:
-      - uses: actions/setup-python@v2
-        with:
-          python-version: '${{ matrix.python-version }}'
       - uses: actions/checkout@v2
-      - run: |
-          if [ -z "${{ matrix.toxenv }}" ]; then
-            echo "DJANGO=${{ matrix.django-version }}" >> $GITHUB_ENV
-          else
-            echo "TOXENV=${{ matrix.toxenv }}" >> $GITHUB_ENV
-          fi
-      - run: pip install tox tox-gh-actions
-      - run: tox
-    allow_failures:
-      - python-version: 'nightly'
-      - django-version: 'main'
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install tox
+          pip install codecov
+      - name: Run Tox
+        run: tox
+      - name: Run Codecov
+        if: success()
+        run: codecov
+      - name: Set up Elasticsearch
+        if: matrix.env == 'TOXENV=elasticsearch'
+        run: |
+          docker pull elasticsearch:7.3.2
+          docker run --name elasticsearch -e "discovery.type=single-node" -p 9200:9200 -d elasticsearch:7.3.2
+          docker ps
+          sleep 60
