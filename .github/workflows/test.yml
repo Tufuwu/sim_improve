@@ -1,37 +1,17 @@
 name: Python CI
-
 on: [push, pull_request]
 
 jobs:
-  test:
+  build:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python_version: [2.7, 3.5, 3.6, 3.7, 3.8, pypy3.5]
+        python-version: ['2.7', '3.4', '3.5', '3.6', '3.7']
     steps:
-    - uses: actions/checkout@v2
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
 
-    - name: Set up Python ${{ matrix.python_version }}
-      uses: actions/setup-python@v2
-      with:
-        python-version: ${{ matrix.python_version }}
-
-    - name: Install dependencies
-      run: |
-        python setup.py develop
-
-    - name: Run tests
-      run: |
-        python -m pytest
-
-  notify:
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-    - name: Send Slack notification
-      uses: 8398a7/action-slack@v3
-      with:
-        status: ${{ job.status }}
-        fields: repo,message,commit,author,action,eventName,ref,workflow,job,took
-      env:
-        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      - run: make deps
+      - run: make test
