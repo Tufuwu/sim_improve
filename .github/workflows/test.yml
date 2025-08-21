@@ -1,44 +1,28 @@
-name: CI
+name: Python CI
 
-on: [push, pull_request]
+on: [push, pull_request, workflow_dispatch]
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['2.7', '3.5', '3.6', '3.7', '3.8', '3.9']
+        python-version: ["3.6", "3.7", "3.8", "3.9"]
 
     steps:
-    - uses: actions/checkout@v2
+      - uses: actions/checkout@v2
 
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
-      with:
-        python-version: ${{ matrix.python-version }}
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
 
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip wheel setuptools
-        pip install -r reqs/requirements-latest.txt -r reqs/requirements-tests.txt
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install aiosqlite
 
-    - name: Run tests
-      run: |
-        coverage erase
-        coverage run --branch bin/trial scrapyd
-        coverage report
-
-    - name: Upload coverage to Codecov
-      env:
-        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-      run: |
-        pip install codecov
-        codecov
-
-  notifications:
-    irc:
-      channels:
-        - "irc.freenode.org#scrapy"
-      use_notice: true
-      skip_join: true
+      - name: Run tests
+        run: |
+          cd tests
+          ./test.py
